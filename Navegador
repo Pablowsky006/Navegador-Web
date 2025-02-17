@@ -1,0 +1,104 @@
+        private string rutaArchivo = "C:\\Users\\quixt\\Desktop\\ejemplo2.txt";
+        public Form1()
+        {
+            InitializeComponent();
+            this.Resize += new System.EventHandler(this.Form1_Resize);
+
+
+            webView21.NavigationStarting += EnsureHttps;
+        }
+
+
+        void EnsureHttps(object sender, CoreWebView2NavigationStartingEventArgs args)
+        {
+            
+            
+                String uri = args.Uri;
+
+                
+                if (!uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                    !uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                  
+
+                    
+                    string newUri = "https://" + uri;
+
+                    
+                    webView21.CoreWebView2.Navigate(newUri);
+
+                    
+                    Guardar(newUri);
+                }
+            
+
+        }
+
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            Cargar();
+        }
+
+        private void Cargar()
+        {
+            if (File.Exists(rutaArchivo))
+            {
+                string[] lineas = File.ReadAllLines(rutaArchivo);
+                comboBox1.Items.Clear(); 
+                comboBox1.Items.AddRange(lineas);
+            }
+        }
+
+        private void Guardar(string uri)
+        {
+            using (StreamWriter sw = new StreamWriter(rutaArchivo, true)) 
+            {
+                sw.WriteLine(uri); 
+            }
+        }
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            webView21.Size = this.ClientSize - new System.Drawing.Size(webView21.Location);
+           button1.Left = this.ClientSize.Width - button1.Width;
+            comboBox1.Width = button1.Left - comboBox1.Left;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (webView21 != null && webView21.CoreWebView2 != null)
+            {
+                string url = comboBox1.Text.Trim();
+
+               
+                if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                    !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    
+                    url = "https://" + url;
+                }
+
+                
+                webView21.CoreWebView2.Navigate(url);
+
+                
+                Guardar(url);
+            }
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            string archivo = "C:\\Users\\quixt\\Desktop\\ejemplo2.txt";
+
+            
+            FileStream stream = new FileStream(archivo, FileMode.Append, FileAccess.Write);
+            
+            StreamWriter writer = new StreamWriter(stream);
+         
+            writer.WriteLine(comboBox1.Text);
+       
+            writer.Close();
+        }
+    }
+}
