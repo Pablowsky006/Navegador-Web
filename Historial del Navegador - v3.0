@@ -1,0 +1,229 @@
+ class Gestor
+ {
+     private string rutaArchivo = "C:\\Users\\quixt\\Desktop\\Muestra.json";
+     private ComboBox comboBox;
+     private WebView2 webView;
+     private List<string> urls;
+     private List<int> visitas;
+
+     public Gestor(ComboBox comboBox, WebView2 webView)
+     {
+         this.comboBox = comboBox;
+         this.webView = webView;
+         this.urls = new List<string>();
+         this.visitas = new List<int>();
+
+
+         this.webView.NavigationStarting += EnsureHttps;
+         Cargar();
+     }
+
+
+
+     private void EnsureHttps(object sender, CoreWebView2NavigationStartingEventArgs args)
+     {
+         string uri = args.Uri;
+
+         if (!uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+             !uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+         {
+             string newUri = "https://" + uri;
+             webView.CoreWebView2.Navigate(newUri);
+             Guardar(newUri);
+
+         }
+     }
+
+     private void Cargar()
+     {
+         if (File.Exists(rutaArchivo))
+         {
+             string json = File.ReadAllText(rutaArchivo);
+             
+             try
+             {
+                 var data = JsonConvert.DeserializeObject<Dictionary<string, int>>(json);
+                 if (data != null)
+                 {
+                     urls = data.Keys.ToList();
+                     visitas = data.Values.ToList();
+                 }
+                 comboBox.Items.Clear();
+                 comboBox.Items.AddRange(urls.ToArray());
+             }
+             catch (JsonException ex)
+             {
+                 MessageBox.Show("Error al deserializar el JSON: " + ex.Message);
+             }
+         }
+     }
+
+     private void Guardar(string uri)
+     {
+
+
+         int index = urls.IndexOf(uri);
+
+         if (index >= 0)
+         {
+
+             visitas[index]++;
+         }
+         else
+         {
+
+             urls.Add(uri);
+             visitas.Add(1);
+         }
+
+
+
+
+         File.WriteAllLines(rutaArchivo, urls.ToArray());
+
+
+         comboBox.Items.Clear();
+         comboBox.Items.AddRange(urls.ToArray());
+     }
+
+
+
+
+
+
+     public void NavegarDesdeComboBox()
+     {
+         if (webView != null && webView.CoreWebView2 != null)
+         {
+             string url = comboBox.Text.Trim();
+
+             if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                 !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+             {
+                 url = "https://" + url;
+             }
+
+             webView.CoreWebView2.Navigate(url);
+             Guardar(url);
+             Actualizar(url);
+         }
+     }
+
+     public void Actualizar(string nuevaURL = null)
+     {
+
+         List<string> historial = new List<string>();
+
+         if (File.Exists(rutaArchivo))
+         {
+             historial = File.ReadAllLines(rutaArchivo).ToList();
+         }
+
+
+         if (!string.IsNullOrEmpty(nuevaURL) && !historial.Contains(nuevaURL))
+         {
+             historial.Insert(0, nuevaURL);
+             historial = historial.Take(10).ToList();
+         }
+
+
+         using (StreamWriter writer = new StreamWriter(rutaArchivo, false))
+         {
+             foreach (string url in historial)
+             {
+                 writer.WriteLine(url);
+             }
+         }
+
+
+         comboBox.Items.Clear();
+         comboBox.Items.AddRange(historial.ToArray());
+     }
+
+     public void ordenar()
+     {
+         for (int i = 0; i < visitas.Count - 1; i++)
+         {
+             for (int j = 0; j < visitas.Count - 1 - i; j++)
+             {
+                 if (visitas[j] > visitas[j + 1])
+                 {
+
+                     int tempVisitas = visitas[j];
+                     visitas[j] = visitas[j + 1];
+                     visitas[j + 1] = tempVisitas;
+
+
+                     string tempUrl = urls[j];
+                     urls[j] = urls[j + 1];
+                     urls[j + 1] = tempUrl;
+                 }
+             }
+         }
+
+
+         File.WriteAllLines(rutaArchivo, urls.ToArray());
+
+
+         comboBox.Items.Clear();
+         comboBox.Items.AddRange(urls.ToArray());
+     }
+
+
+     public void EliminarUrl(string url)
+     {
+         int index = urls.IndexOf(url);
+         if (index >= 0)
+         {
+             urls.RemoveAt(index);
+             visitas.RemoveAt(index);
+
+
+             File.WriteAllLines(rutaArchivo, urls.ToArray());
+             comboBox.Items.AddRange(urls.ToArray());
+         }
+         else
+         {
+             MessageBox.Show("La url no se encontro en el historial.");
+         }
+
+     }
+ 
+
+ 
+
+ public void GuardarJson(string rutaArchivo)
+     {
+         string json = JsonConvert.SerializeObject(urls);
+         System.IO.File.WriteAllText(rutaArchivo, json);
+     }
+
+     public void LeerJson(string rutaArchivo)
+     {
+         if (!File.Exists(rutaArchivo))
+         {
+             throw new FileNotFoundException("El archivo JSON no se encontró.", rutaArchivo);
+         }
+
+         try
+         {
+             using (StreamReader jsonStream = File.OpenText(rutaArchivo))
+             {
+                 string json = jsonStream.ReadToEnd();
+                 urls = JsonConvert.DeserializeObject<List<string>>(json); 
+                 comboBox.Items.Clear();
+                 comboBox.Items.AddRange(urls.ToArray());
+             }
+         }
+         catch (JsonException ex)
+         {
+             Console.WriteLine("Error al deserializar el JSON: " + ex.Message);
+         }
+         catch (Exception ex)
+         {
+             Console.WriteLine("Ocurrió un error: " + ex.Message);
+         }
+     }
+
+
+ }
